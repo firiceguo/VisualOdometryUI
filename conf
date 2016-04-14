@@ -1,0 +1,9 @@
+[Boundary]
+GroundRegionTop = 100
+SkyRegionBottom = 150
+
+[CameraParameters]
+H = 0
+D = 0
+V = 0
+VFOV = 0
