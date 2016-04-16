@@ -97,13 +97,15 @@ class TrackLK(QtCore.QThread):
             if ch == 27:
                 self._signal.emit(ch)
 
-            # iname = "image.png"
-            cv2.imwrite("image.png", self.vis)
             self._signal.emit(ch)
 
     def stop(self):
         print(0xFF & cv2.waitKey(1))
         self.flag = 0
+
+    def GetFrame(self):
+        # self.vis = cv2.cvtColor(self.vis, cv2.COLOR_BGR2GRAY)
+        return(self.vis)
 
 
 # if __name__ == '__main__':

@@ -7,7 +7,6 @@
 # WARNING! All changes made in this file will be lost!
 
 import os
-import sys
 import lk_track
 # from numpy import asarray
 # import numpy as np
@@ -197,12 +196,14 @@ class Ui_VisualOdometryUI(object):
         os.system('notepad conf')
 
     def getimg(self, ch):
-        try:
-            path = QtGui.QPixmap(r'image.png')
-            path.scaled(path.width(), path.height(), QtCore.Qt.KeepAspectRatio)
-            self.graphicsView.setPixmap(path)
-        except:
-            pass
+        frame = self.thread.GetFrame()
+        path = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        path = QtGui.QImage(path, path.shape[1], path.shape[0],
+                            path.shape[1] * 3, QtGui.QImage.Format_RGB888)
+        pix = QtGui.QPixmap.fromImage(path)
+        pix.scaled(pix.width(), pix.height(), QtCore.Qt.KeepAspectRatio)
+        self.graphicsView.setPixmap(pix)
+
         ch = 0xFF & cv2.waitKey(1)
         if ch == 27:
             self.thread.stop()
