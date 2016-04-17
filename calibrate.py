@@ -24,6 +24,7 @@ from common import splitfn
 
 # built-in modules
 import os
+import ConfigParser
 
 
 class CorrectCamera:
@@ -124,5 +125,20 @@ if __name__ == '__main__':
         outfile = img_found + '_undistorted.png'
         print('Undistorted image written to: %s' % outfile)
         cv2.imwrite(outfile, dst)
+
+    cf = ConfigParser.ConfigParser()
+    cf.read("VO.conf")
+    cf.set("CameraParameters", "cx", camera_matrix[0, 2])
+    cf.set("CameraParameters", "cy", camera_matrix[1, 2])
+    cf.set("CameraParameters", "fx", camera_matrix[0, 0])
+    cf.set("CameraParameters", "fy", camera_matrix[1, 1])
+    cf.set("CameraParameters", "k1", dist_coefs.ravel()[0])
+    cf.set("CameraParameters", "k2", dist_coefs.ravel()[1])
+    cf.set("CameraParameters", "k3", dist_coefs.ravel()[4])
+    cf.set("CameraParameters", "p1", dist_coefs.ravel()[2])
+    cf.set("CameraParameters", "p2", dist_coefs.ravel()[3])
+
+    with open("VO.conf", "w+") as f:
+        cf.write(f)
 
     cv2.destroyAllWindows()

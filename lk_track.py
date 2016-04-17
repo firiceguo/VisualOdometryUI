@@ -104,9 +104,13 @@ class TrackLK(QtCore.QThread):
         self.flag = 0
 
     def GetFrame(self):
-        # self.vis = cv2.cvtColor(self.vis, cv2.COLOR_BGR2GRAY)
         return(self.vis)
 
+    def GetTrackNum(self):
+        return(len(self.tracks))
+
+    def GetTrackFeatures(self):
+        return(self.tracks)
 
 # if __name__ == '__main__':
 #     import sys
