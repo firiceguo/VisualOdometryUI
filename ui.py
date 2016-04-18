@@ -193,7 +193,7 @@ class Ui_VisualOdometryUI(object):
         self.thread.start()
 
     def openconfig(self):
-        os.system('notepad conf')
+        os.system('notepad VO.conf')
 
     def getimg(self, ch):
         frame = self.thread.GetFrame()

@@ -25,5 +25,6 @@ class Rotation():
                 rotationIncrement = currentAngularPlacement - previousAngularPlacement
                 self.RotationIncrements.append(rotationIncrement)
 
-    def GetRotationIncrements(self):
-        return(self.RotationIncrements)
+    def GetRotation(self, track):
+        self.RotationIncrements.sort()
+        return(math.degrees(self.RotationIncrements[track.GetTrackNum // 2]))
