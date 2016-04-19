@@ -41,7 +41,7 @@ sec = 0
 
 
 class TrackLK(QtCore.QThread):
-    _signal = QtCore.pyqtSignal(int)
+    _signal = QtCore.pyqtSignal()
 
     def __init__(self):
         super(TrackLK, self).__init__()
@@ -55,7 +55,7 @@ class TrackLK(QtCore.QThread):
 
     def run(self):
         while self.flag:
-            ret, frame = self.cam.read()
+            self.fps, frame = self.cam.read()
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             self.vis = frame.copy()
 
@@ -93,14 +93,13 @@ class TrackLK(QtCore.QThread):
             self.prev_gray = frame_gray
             # cv2.imshow('lk_track', self.vis)
 
-            ch = 0xFF & cv2.waitKey(1)
-            if ch == 27:
-                self._signal.emit(ch)
+            # ch = 0xFF & cv2.waitKey(1)
+            # if ch == 27:
+            #     self._signal.emit(ch)
 
-            self._signal.emit(ch)
+            self._signal.emit()
 
     def stop(self):
-        print(0xFF & cv2.waitKey(1))
         self.flag = 0
 
     def GetFrame(self):

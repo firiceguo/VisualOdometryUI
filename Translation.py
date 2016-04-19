@@ -8,7 +8,7 @@ class Translation():
     """docstring for Translation"""
 
     def __init__(self, headingChangeRad, track=lk_track.TrackLK):
-        super(Translation, self).__init__()
+        # super(Translation, self).__init__(headingChangeRad, track)
         self.s = math.sin(headingChangeRad)
         self.c = math.cos(headingChangeRad)
         self.trackedFeatures = track.GetTrackFeatures()
@@ -21,25 +21,27 @@ class Translation():
 
         cf = ConfigParser.ConfigParser()
         cf.read("VO.conf")
-        self.ground = cf.get("Boundary", "groundregiontop")
+        self.ground = int(cf.get("Boundary", "groundregiontop"))
 
-    def PopulateRotationCorrectedTranslationIncrements(self):
+    def PopulateRotationCorrectedTranslationIncrements(self, track):
+        self.trackedNum = track.GetTrackNum()
         for i in xrange(self.trackedNum):
-            feature = self.trackedFeatures[i]
+            feature = track.GetTrackFeatures()[i]
             if len(feature) < 2:
                 continue
-            if not(feature[-1, 1] > self.ground and feature[0, 1] > self.ground):
+            if not(feature[-1][1] > self.ground and feature[0][1] > self.ground):
                 continue
-            rotationCorrectedEndPoint = (self.c * feature[-1, 0] - self.s * feature[-1, 1],
-                                         self.s * feature[-1, 0] + self.c * feature[-1, 1])
-            translationIncrement = (feature[0, 0] - rotationCorrectedEndPoint[0],
-                                    feature[0, 1] - rotationCorrectedEndPoint[1])
+            rotationCorrectedEndPoint = (self.c * feature[-1][0] - self.s * feature[-1][1],
+                                         self.s * feature[-1][0] + self.c * feature[-1][1])
+            translationIncrement = (feature[0][0] - rotationCorrectedEndPoint[0],
+                                    feature[0][1] - rotationCorrectedEndPoint[1])
             self.m_TranslationIncrements.append(translationIncrement)
             self.m_GroundFeatures.append(feature)
 
     def DeterminMostLikelyTranslationVector(self):
         maxVotes = 0
         maxPicks = 40
+        mostLikelyTranslation = (0, 0)
 
         if len(self.m_TranslationIncrements) < maxPicks:
             randomPicksCount = len(self.m_TranslationIncrements)
@@ -56,9 +58,9 @@ class Translation():
             for j in xrange(len(self.m_TranslationIncrements)):
                 if i == j:
                     continue
-                dx = self.m_TranslationIncrements[j, 0] - translationVector[0]
-                dy = self.m_TranslationIncrements[j, 1] - translationVector[1]
-                if (dx ^ 2 + dy ^ 2) < 0.5:
+                dx = self.m_TranslationIncrements[j][0] - translationVector[0]
+                dy = self.m_TranslationIncrements[j][1] - translationVector[1]
+                if (dx * dx + dy * dy) < 0.5:
                     votes = votes + 1
                     self.m_ScratchPadUsedGroundFeatures.append(self.m_GroundFeatures[j])
             if votes > maxVotes:
@@ -76,6 +78,9 @@ class Translation():
                                      self.s * point[0] + self.c * point[1])
         return(afterRemoveRotationEffect)
 
-    def run(self):
-        self.PopulateRotationCorrectedTranslationIncrements(self)
-        self.DeterminMostLikelyTranslationVector(self)
+    def GetCurrentLocationChange(self):
+        return(self.m_CurrentLocationChange)
+
+    def run(self, track):
+        self.PopulateRotationCorrectedTranslationIncrements(track)
+        self.DeterminMostLikelyTranslationVector()

@@ -8,6 +8,7 @@
 
 import os
 import lk_track
+import Position
 # from numpy import asarray
 # import numpy as np
 # import PySide
@@ -187,26 +188,50 @@ class Ui_VisualOdometryUI(object):
         QtCore.QMetaObject.connectSlotsByName(VisualOdometryUI)
 
         self.connect(self.config, QtCore.SIGNAL('clicked()'), self.openconfig)
+        self.connect(self.clear, QtCore.SIGNAL('clicked()'), self.clearNum)
 
-        self.thread = lk_track.TrackLK()
-        self.thread._signal.connect(self.getimg)
-        self.thread.start()
+        self.TrackThread = lk_track.TrackLK()
+        self.TrackThread._signal.connect(self.getimg)
+        self.TrackThread.start()
+
+        self.PositionThread = Position.Position(self.TrackThread)
+        self.PositionThread._signalPosition.connect(self.changeOdometryUI)
+        self.PositionThread.start()
 
     def openconfig(self):
         os.system('notepad VO.conf')
 
-    def getimg(self, ch):
-        frame = self.thread.GetFrame()
+    def clearNum(self):
+        pass
+
+    def getimg(self):
+        frame = self.TrackThread.GetFrame()
         path = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         path = QtGui.QImage(path, path.shape[1], path.shape[0],
                             path.shape[1] * 3, QtGui.QImage.Format_RGB888)
         pix = QtGui.QPixmap.fromImage(path)
         pix.scaled(pix.width(), pix.height(), QtCore.Qt.KeepAspectRatio)
         self.graphicsView.setPixmap(pix)
+        self.fps_2.setText(QtCore.QString(str(self.TrackThread.fps)))
+        qst = QtCore.QString(str(self.TrackThread.GetTrackNum()))
+        self.tracked_2.setText(qst)
 
-        ch = 0xFF & cv2.waitKey(1)
-        if ch == 27:
-            self.thread.stop()
+        # ch = 0xFF & cv2.waitKey(1)
+        # if ch == 27:
+        #     self.TrackThread.stop()
+
+    def changeOdometryUI(self):
+        st = "( " + str(self.PositionThread.GetLocation()[0]) + ", " + str(self.PositionThread.GetLocation()[1]) + " )"
+        self.location_2.setText(QtCore.QString(st))
+
+        st = str(self.PositionThread.GetHeading())
+        self.heading_2.setText(QtCore.QString(st))
+
+        st = str(self.PositionThread.GetPathLen())
+        self.pathlen_2.setText(QtCore.QString(st))
+
+        st = str(self.PositionThread.GetDistance())
+        self.distance_2.setText(QtCore.QString(st))
 
     def retranslateUi(self, VisualOdometryUI):
         VisualOdometryUI.setWindowTitle(_translate("VisualOdometryUI", "VisualOdometryUI", None))
