@@ -13,42 +13,47 @@ class Position(QtCore.QThread):
     def __init__(self, track=lk_track.TrackLK):
         super(Position, self).__init__(track)
         self.rotation = Rotation.Rotation(track)
-        self.translation = Translation.Translation(self.rotation.GetRad(track), track)
+        self.translation = Translation.Translation(self.rotation.GetRad(), track)
 
         self.rotationSum = 0
         self.pathLen = 0
-        self.currentLocation = (0, 0)
+        self.location = [0, 0]
         self.trackP = track
+        self.heading = 0
 
         self.flag = 1
         self.timer = QtCore.QTimer(QtCore.QThread())
 
     def run(self):
         while self.flag:
+            print(self.heading)
             # self.trackP._signal.connect(self.CalculatePosition)
             self.CalculatePosition()
             self._signalPosition.emit()
 
     def CalculatePosition(self):
         self.rotation.run(self.trackP)
-        self.translation.run(self.trackP)
+        self.translation.run(self.rotation.GetRad(), self.trackP)
 
-        locationChange_x = self.translation.GetCurrentLocationChange()[0]
-        locationChange_y = self.translation.GetCurrentLocationChange()[1]
+        self.heading += self.rotation.GetRad() / 2
+        cosHeading = math.cos(self.heading)
+        sinHeading = math.sin(self.heading)
+        locationChangeRobot = self.translation.GetCurrentLocationChange()
+        deltaXGlobal = locationChangeRobot[0] * cosHeading - locationChangeRobot[1] * sinHeading
+        deltaYGlobal = locationChangeRobot[0] * sinHeading + locationChangeRobot[1] * cosHeading
 
-        self.rotationSum = self.rotationSum + self.rotation.GetRotationIncrements(self.trackP)
-        self.pathLen = self.pathLen + math.sqrt(locationChange_x * locationChange_x + locationChange_y * locationChange_y)
-        self.currentLocation = (self.currentLocation[0] + locationChange_x,
-                                self.currentLocation[1] + locationChange_y)
+        self.pathLen += math.sqrt(deltaXGlobal * deltaXGlobal + deltaYGlobal * deltaYGlobal)
+        self.location = [self.location[0] + deltaXGlobal, self.location[1] + deltaYGlobal]
+        self.heading += self.rotation.GetRad() / 2
 
     def GetDistance(self):
-        return(math.sqrt(self.currentLocation[0] * self.currentLocation[0] + self.currentLocation[1] * self.currentLocation[1]))
+        return(math.sqrt(self.location[0] * self.location[0] + self.location[1] * self.location[1]))
 
     def GetPathLen(self):
         return(self.pathLen)
 
     def GetHeading(self):
-        return(math.degrees(self.rotationSum))
+        return(math.degrees(self.heading))
 
     def GetLocation(self):
-        return(self.currentLocation)
+        return(self.location)

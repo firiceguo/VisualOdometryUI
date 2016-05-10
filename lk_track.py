@@ -26,15 +26,16 @@ import numpy as np
 import cv2
 import video
 from common import draw_str
+import ConfigParser
 
 lk_params = dict(winSize=(15, 15),
                  maxLevel=2,
                  criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 20, 0.005))
 
-feature_params = dict(maxCorners=500,
-                      qualityLevel=0.3,
-                      minDistance=7,
-                      blockSize=7)
+feature_params = dict(maxCorners=1000,
+                      qualityLevel=0.01,
+                      minDistance=10,
+                      blockSize=20)
 
 global sec
 sec = 0
@@ -45,17 +46,21 @@ class TrackLK(QtCore.QThread):
 
     def __init__(self):
         super(TrackLK, self).__init__()
-        self.track_len = 10
+        self.track_len = 5
         self.detect_interval = 5
         self.tracks = []
         self.cam = video.create_capture(0)
         self.frame_idx = 0
         self.timer = QtCore.QTimer(QtCore.QThread())
         self.flag = 1
+        self.w = 0
+        self.h = 0
 
     def run(self):
         while self.flag:
             self.fps, frame = self.cam.read()
+            self.h, self.w = frame.shape[:2]
+            frame = self.undistort(frame)
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             self.vis = frame.copy()
 
@@ -102,11 +107,31 @@ class TrackLK(QtCore.QThread):
     def stop(self):
         self.flag = 0
 
+    def GetTrackNum(self):
+        return(len(self.tracks))
+
     def GetFrame(self):
         return(self.vis)
 
-    def GetTrackNum(self):
-        return(len(self.tracks))
+    def undistort(self, frame):
+        cf = ConfigParser.ConfigParser()
+        cf.read("VO.conf")
+        cx = np.float32(cf.get("CameraParameters", "cx"))
+        cy = np.float32(cf.get("CameraParameters", "cy"))
+        fx = np.float32(cf.get("CameraParameters", "fx"))
+        fy = np.float32(cf.get("CameraParameters", "fy"))
+        k1 = np.float32(cf.get("CameraParameters", "k1"))
+        k2 = np.float32(cf.get("CameraParameters", "k2"))
+        k3 = np.float32(cf.get("CameraParameters", "k3"))
+        p1 = np.float32(cf.get("CameraParameters", "p1"))
+        p2 = np.float32(cf.get("CameraParameters", "p2"))
+        camera_matrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+        dist_coefs = np.array([k1, k2, p1, p2, k3])
+        h = self.h
+        w = self.w
+        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(camera_matrix, dist_coefs, (w, h), 1, (w, h))
+        dst = cv2.undistort(frame, camera_matrix, dist_coefs, None, newcameramtx)
+        return(dst)
 
     def GetTrackFeatures(self):
         return(self.tracks)

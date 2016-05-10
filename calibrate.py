@@ -32,7 +32,7 @@ class CorrectCamera:
         args, img_mask = getopt.getopt(sys.argv[1:], '', ['debug=', 'square_size='])
         args = dict(args)
         args.setdefault('--debug', './output/')
-        args.setdefault('--square_size', 1.0)
+        args.setdefault('--square_size', 19.5)
         if not img_mask:
             img_mask = './data/left*.jpg'  # default
             self.img_names = glob(img_mask)
@@ -47,7 +47,7 @@ class CorrectCamera:
             os.mkdir(self.debug_dir)
         square_size = float(args.get('--square_size'))
 
-        self.pattern_size = (9, 6)
+        self.pattern_size = (7, 7)
         self.pattern_points = np.zeros((np.prod(self.pattern_size), 3), np.float32)
         self.pattern_points[:, :2] = np.indices(self.pattern_size).T.reshape(-1, 2)
         self.pattern_points *= square_size
