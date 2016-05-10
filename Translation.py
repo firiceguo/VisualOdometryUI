@@ -5,6 +5,7 @@ import random
 
 
 class Translation():
+
     """docstring for Translation"""
 
     def __init__(self, headingChangeRad, track=lk_track.TrackLK):
@@ -12,7 +13,6 @@ class Translation():
         self.s = math.sin(headingChangeRad)
         self.c = math.cos(headingChangeRad)
         self.trackedFeatures = track.GetTrackFeatures()
-        self.trackedNum = track.GetTrackNum()
         self.m_TranslationIncrements = []
         self.m_GroundFeatures = []
         self.m_ScratchPadUsedGroundFeatures = []
@@ -23,16 +23,26 @@ class Translation():
         cf.read("VO.conf")
         self.ground = int(cf.get("Boundary", "groundregiontop"))
 
-    def PopulateRotationCorrectedTranslationIncrements(self, track):
-        self.trackedNum = track.GetTrackNum()
-        for i in xrange(self.trackedNum):
-            feature = track.GetTrackFeatures()[i]
+    def run(self, headingChangeRad, track):
+        self.PopulateRotationCorrectedTranslationIncrements(track, headingChangeRad)
+        self.DeterminMostLikelyTranslationVector()
+
+    def PopulateRotationCorrectedTranslationIncrements(self, track, headingChangeRad):
+        self.s = math.sin(headingChangeRad)
+        self.c = math.cos(headingChangeRad)
+        self.m_TranslationIncrements = []
+        trackedF = track
+        featuresNum = len(trackedF.GetTrackFeatures())
+        for i in xrange(featuresNum):
+            try:
+                feature = trackedF.GetTrackFeatures()[i]
+            except IndexError:
+                continue
             if len(feature) < 2:
                 continue
             if not(feature[-1][1] > self.ground and feature[0][1] > self.ground):
                 continue
-            rotationCorrectedEndPoint = (self.c * feature[-1][0] - self.s * feature[-1][1],
-                                         self.s * feature[-1][0] + self.c * feature[-1][1])
+            rotationCorrectedEndPoint = self.RemoveRotationEffect(feature[-1])
             translationIncrement = (feature[0][0] - rotationCorrectedEndPoint[0],
                                     feature[0][1] - rotationCorrectedEndPoint[1])
             self.m_TranslationIncrements.append(translationIncrement)
@@ -80,7 +90,3 @@ class Translation():
 
     def GetCurrentLocationChange(self):
         return(self.m_CurrentLocationChange)
-
-    def run(self, track):
-        self.PopulateRotationCorrectedTranslationIncrements(track)
-        self.DeterminMostLikelyTranslationVector()

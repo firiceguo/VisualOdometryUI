@@ -221,16 +221,17 @@ class Ui_VisualOdometryUI(object):
         #     self.TrackThread.stop()
 
     def changeOdometryUI(self):
-        st = "( " + str(self.PositionThread.GetLocation()[0]) + ", " + str(self.PositionThread.GetLocation()[1]) + " )"
+        st = "( " + str(round(self.PositionThread.GetLocation()[0], 2)) + \
+            ", " + str(round(self.PositionThread.GetLocation()[1], 2)) + " )"
         self.location_2.setText(QtCore.QString(st))
 
-        st = str(self.PositionThread.GetHeading())
+        st = str(round(self.PositionThread.GetHeading(), 2))
         self.heading_2.setText(QtCore.QString(st))
 
-        st = str(self.PositionThread.GetPathLen())
+        st = str(round(self.PositionThread.GetPathLen(), 2))
         self.pathlen_2.setText(QtCore.QString(st))
 
-        st = str(self.PositionThread.GetDistance())
+        st = str(round(self.PositionThread.GetDistance(), 2))
         self.distance_2.setText(QtCore.QString(st))
 
     def retranslateUi(self, VisualOdometryUI):

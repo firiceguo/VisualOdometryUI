@@ -24,6 +24,7 @@ image_extensions = ['.bmp', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.pbm', '.
 
 
 class Bunch(object):
+
     def __init__(self, **kw):
         self.__dict__.update(kw)
 
@@ -96,6 +97,7 @@ def draw_str(dst, target, s):
 
 
 class Sketcher:
+
     def __init__(self, windowname, dests, colors_func):
         self.prev_pt = None
         self.windowname = windowname
@@ -169,6 +171,7 @@ def Timer(msg):
 
 
 class StatValue:
+
     def __init__(self, smooth_coef=0.5):
         self.value = None
         self.smooth_coef = smooth_coef
@@ -182,6 +185,7 @@ class StatValue:
 
 
 class RectSelector:
+
     def __init__(self, win, callback):
         self.win = win
         self.callback = callback
