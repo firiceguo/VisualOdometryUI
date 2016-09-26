@@ -32,10 +32,10 @@ lk_params = dict(winSize=(15, 15),
                  maxLevel=2,
                  criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 20, 0.005))
 
-feature_params = dict(maxCorners=1000,
-                      qualityLevel=0.01,
-                      minDistance=10,
-                      blockSize=20)
+feature_params = dict(maxCorners=200,
+                      qualityLevel=0.05,
+                      minDistance=20,
+                      blockSize=10)
 
 global sec
 sec = 0
@@ -49,18 +49,27 @@ class TrackLK(QtCore.QThread):
         self.track_len = 5
         self.detect_interval = 5
         self.tracks = []
-        self.cam = video.create_capture(0)
+        self.cam = video.create_capture(1)
         self.frame_idx = 0
         self.timer = QtCore.QTimer(QtCore.QThread())
         self.flag = 1
+        self.fps = True
         self.w = 0
         self.h = 0
+        self.UseCam = 0
 
     def run(self):
+        capture = cv2.VideoCapture("./data/video2.mp4")
         while self.flag:
-            self.fps, frame = self.cam.read()
+            if self.UseCam:
+                self.fps, frame = self.cam.read(1)
+            else:
+                self.fps, frame = capture.read()
+            if not self.fps:
+                self.tracks = []
+                continue
             self.h, self.w = frame.shape[:2]
-            frame = self.undistort(frame)
+            # frame = self.undistort(frame)
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             self.vis = frame.copy()
 
@@ -96,11 +105,6 @@ class TrackLK(QtCore.QThread):
 
             self.frame_idx += 1
             self.prev_gray = frame_gray
-            # cv2.imshow('lk_track', self.vis)
-
-            # ch = 0xFF & cv2.waitKey(1)
-            # if ch == 27:
-            #     self._signal.emit(ch)
 
             self._signal.emit()
 
@@ -135,13 +139,3 @@ class TrackLK(QtCore.QThread):
 
     def GetTrackFeatures(self):
         return(self.tracks)
-
-# if __name__ == '__main__':
-#     import sys
-#     try:
-#         video_src = sys.argv[1]
-#     except:
-#         video_src = 0
-#     print(__doc__)
-#     TrackLK().run()
-#     cv2.destroyAllWindows()

@@ -187,6 +187,8 @@ class Ui_VisualOdometryUI(object):
         self.retranslateUi(VisualOdometryUI)
         QtCore.QMetaObject.connectSlotsByName(VisualOdometryUI)
 
+        self.loc = []
+
         self.connect(self.config, QtCore.SIGNAL('clicked()'), self.openconfig)
         self.connect(self.clear, QtCore.SIGNAL('clicked()'), self.clearNum)
 
@@ -202,7 +204,7 @@ class Ui_VisualOdometryUI(object):
         os.system('notepad VO.conf')
 
     def clearNum(self):
-        pass
+        self.PositionThread.SetZero()
 
     def getimg(self):
         frame = self.TrackThread.GetFrame()
@@ -221,17 +223,17 @@ class Ui_VisualOdometryUI(object):
         #     self.TrackThread.stop()
 
     def changeOdometryUI(self):
-        st = "( " + str(round(self.PositionThread.GetLocation()[0], 2)) + \
-            ", " + str(round(self.PositionThread.GetLocation()[1], 2)) + " )"
+        st = "( " + str(round(self.PositionThread.GetLocation()[0], 1)) + \
+            ", " + str(round(self.PositionThread.GetLocation()[1], 1)) + " )"
         self.location_2.setText(QtCore.QString(st))
 
-        st = str(round(self.PositionThread.GetHeading(), 2))
+        st = str(round(self.PositionThread.GetHeading(), 1))
         self.heading_2.setText(QtCore.QString(st))
 
-        st = str(round(self.PositionThread.GetPathLen(), 2))
+        st = str(round(self.PositionThread.GetPathLen(), 1))
         self.pathlen_2.setText(QtCore.QString(st))
 
-        st = str(round(self.PositionThread.GetDistance(), 2))
+        st = str(round(self.PositionThread.GetDistance(), 1))
         self.distance_2.setText(QtCore.QString(st))
 
     def retranslateUi(self, VisualOdometryUI):

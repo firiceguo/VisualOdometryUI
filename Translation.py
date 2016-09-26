@@ -1,92 +1,76 @@
-import lk_track
 import math
 import ConfigParser
-import random
+import cv2
+import numpy as np
 
 
 class Translation():
 
-    """docstring for Translation"""
+    """Calculate Translation"""
 
-    def __init__(self, headingChangeRad, track=lk_track.TrackLK):
-        # super(Translation, self).__init__(headingChangeRad, track)
-        self.s = math.sin(headingChangeRad)
-        self.c = math.cos(headingChangeRad)
-        self.trackedFeatures = track.GetTrackFeatures()
+    def __init__(self, headingChangeRad, track):
+        self.t = math.tan(headingChangeRad / 2)
+        self.trackedFeatures = track
         self.m_TranslationIncrements = []
-        self.m_GroundFeatures = []
-        self.m_ScratchPadUsedGroundFeatures = []
-        self.m_UsedGroundFeatures = []
-        self.m_CurrentLocationChange = ()
+        self.m_CurrentLocationChange = (0, 0)
 
         cf = ConfigParser.ConfigParser()
         cf.read("VO.conf")
         self.ground = int(cf.get("Boundary", "groundregiontop"))
+        self.fx = np.float32(cf.get("CameraParameters", "fx"))
 
-    def run(self, headingChangeRad, track):
-        self.PopulateRotationCorrectedTranslationIncrements(track, headingChangeRad)
-        self.DeterminMostLikelyTranslationVector()
+    def run(self, headingChangeRad, perspectiveMatrix, track, prevHeading, currHeading):
+        self.PopulateRotationCorrectedTranslationIncrements(track, headingChangeRad, perspectiveMatrix)
+        self.DeterminMostLikelyTranslationVector(headingChangeRad, prevHeading, currHeading)
 
-    def PopulateRotationCorrectedTranslationIncrements(self, track, headingChangeRad):
+    def PopulateRotationCorrectedTranslationIncrements(self, track, headingChangeRad, perspectiveMatrix):
         self.s = math.sin(headingChangeRad)
         self.c = math.cos(headingChangeRad)
         self.m_TranslationIncrements = []
+        self.m_CurrentLocationChange = (0, 0)
         trackedF = track
-        featuresNum = len(trackedF.GetTrackFeatures())
+        featuresNum = len(trackedF)
+        point = [[], []]
         for i in xrange(featuresNum):
             try:
-                feature = trackedF.GetTrackFeatures()[i]
+                feature = trackedF[i]
             except IndexError:
                 continue
             if len(feature) < 2:
                 continue
             if not(feature[-1][1] > self.ground and feature[0][1] > self.ground):
                 continue
+
             rotationCorrectedEndPoint = self.RemoveRotationEffect(feature[-1])
-            translationIncrement = (feature[0][0] - rotationCorrectedEndPoint[0],
-                                    feature[0][1] - rotationCorrectedEndPoint[1])
-            self.m_TranslationIncrements.append(translationIncrement)
-            self.m_GroundFeatures.append(feature)
+            point[0] = self.PerspectiveTrans(rotationCorrectedEndPoint, perspectiveMatrix)
+            point[1] = self.PerspectiveTrans(feature[0], perspectiveMatrix)
+            translationIncrement = (point[1][0] - point[0][0],
+                                    point[1][1] - point[0][1])
+            if translationIncrement[0] * translationIncrement[1] > 2:
+                self.m_TranslationIncrements.append(translationIncrement)
 
-    def DeterminMostLikelyTranslationVector(self):
-        maxVotes = 0
-        maxPicks = 40
-        mostLikelyTranslation = (0, 0)
-
-        if len(self.m_TranslationIncrements) < maxPicks:
-            randomPicksCount = len(self.m_TranslationIncrements)
-        else:
-            randomPicksCount = maxPicks
-
-        for i in xrange(randomPicksCount):
-            self.m_ScratchPadUsedGroundFeatures = []
-            index = int(math.floor(random.uniform(0, len(self.m_TranslationIncrements))))
-            translationVector = self.m_TranslationIncrements[index]
-            netX = 0
-            netY = 0
-            votes = 0
-            for j in xrange(len(self.m_TranslationIncrements)):
-                if i == j:
-                    continue
-                dx = self.m_TranslationIncrements[j][0] - translationVector[0]
-                dy = self.m_TranslationIncrements[j][1] - translationVector[1]
-                if (dx * dx + dy * dy) < 0.5:
-                    votes = votes + 1
-                    self.m_ScratchPadUsedGroundFeatures.append(self.m_GroundFeatures[j])
-            if votes > maxVotes:
-                maxVotes = votes
-                mostLikelyTranslation = (translationVector[0] + netX / votes,
-                                         translationVector[1] + netY / votes)
-                temp = self.m_UsedGroundFeatures
-                self.m_UsedGroundFeatures = self.m_ScratchPadUsedGroundFeatures
-                self.m_ScratchPadUsedGroundFeatures = temp
-
-        self.m_CurrentLocationChange = mostLikelyTranslation
+    def DeterminMostLikelyTranslationVector(self, headingChangeRad, prevHeading, currHeading):
+        if len(self.m_TranslationIncrements) > 0:
+            Heading = math.tan(math.pi / 2 - prevHeading)
+            minn = math.tan(math.atan2(self.m_TranslationIncrements[0][1],
+                                       self.m_TranslationIncrements[0][0])) - Heading
+            num = 0
+            for i in xrange(len(self.m_TranslationIncrements)):
+                temp = math.tan(math.atan2(self.m_TranslationIncrements[i][1],
+                                           self.m_TranslationIncrements[i][0])) - Heading
+                if temp < minn:
+                    minn = temp
+                    num = i
+            self.m_CurrentLocationChange = self.m_TranslationIncrements[num]
 
     def RemoveRotationEffect(self, point):
-        afterRemoveRotationEffect = (self.c * point[0] - self.s * point[1],
-                                     self.s * point[0] + self.c * point[1])
+        afterRemoveRotationEffect = (point[0] - 2 * self.fx * self.t, point[1])
         return(afterRemoveRotationEffect)
 
     def GetCurrentLocationChange(self):
         return(self.m_CurrentLocationChange)
+
+    def PerspectiveTrans(self, points, perspectiveMatrix):
+        points = np.array(points, np.float32).reshape(-1, 1, 2)
+        afterTrans = cv2.perspectiveTransform(points, perspectiveMatrix)
+        return([afterTrans[0][0][0], afterTrans[0][0][1]])

@@ -1,5 +1,4 @@
 import ConfigParser
-import lk_track
 import math
 import numpy as np
 
@@ -7,8 +6,7 @@ import numpy as np
 class Rotation():
     """Calculate Rotation"""
 
-    def __init__(self, track=lk_track.TrackLK):
-        # Rotation.__init__(self, track)
+    def __init__(self, track):
         cf = ConfigParser.ConfigParser()
         cf.read("VO.conf")
         self.cx = cf.get("CameraParameters", "cx")
@@ -19,12 +17,14 @@ class Rotation():
 
     def run(self, track):
         trackedF = track
-        featuresNum = len(trackedF.GetTrackFeatures())
+        featuresNum = len(trackedF)
         self.RotationIncrements = []
         for i in xrange(featuresNum):
+            if len(trackedF[i]) < 5:
+                continue
             try:
-                previousFeatureLocation = trackedF.GetTrackFeatures()[i][0]
-                currentFeatureLocation = trackedF.GetTrackFeatures()[i][-1]
+                previousFeatureLocation = trackedF[i][-1]
+                currentFeatureLocation = trackedF[i][0]
             except IndexError:
                 continue
             if currentFeatureLocation[1] < self.sky:
@@ -40,12 +40,7 @@ class Rotation():
 
     def GetRotationIncrements(self):
         self.RotationIncrements.sort()
-        return(math.degrees(self.RotationIncrements[len(self.RotationIncrements) // 2]))
-        # return(math.degrees(np.mean(self.RotationIncrements)))
-        # self.RotationIncrements.sort()
-        # middle = self.RotationIncrements[len(self.RotationIncrements) // 2]
-        # mean = np.mean(self.RotationIncrements)
-        # return(math.degrees((middle + mean) / 2))
+        return(math.degrees(self.RotationIncrements[len(self.RotationIncrements) // 2]) / 15)
 
     def GetRad(self):
         return(math.radians(self.m_HeadingChange))
